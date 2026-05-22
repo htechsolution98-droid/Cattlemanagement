@@ -1,25 +1,44 @@
-import logo from './logo.svg';
-import './App.css';
+import { Routes, Route } from "react-router-dom";
 
-function App() {
+import Adminlogin from "./Comp/Admin/Adminlogin";
+
+import AdminLayout from "./Comp/Admin/AdminLayout";
+
+import Dashboard from "./Comp/Admin/Dashboard";
+
+import CattleManagement from "./Comp/Admin/CattleManagement";
+
+import CreateCow from "./Comp/Admin/CreateCow";
+import Feedplan from "./Comp/Admin/Feedplan";
+import FoodIntake from "./Comp/Admin/FoodIntake ";
+import CreateFoodIntake from "./Comp/Admin/CreateFoodIntake";
+import CowDeath from "./Comp/Admin/CowDeath";
+import CowDeathSearch from "./Comp/Admin/CowDeathSearch";
+import CowDeathRecord from "./Comp/Admin/CowDeathRecord";
+import Sellrecord from "./Comp/Admin/Sellrecord";
+import CreateSellRecord from "./Comp/Admin/CreateSellRecord";
+
+const App = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/" element={<Adminlogin />} />
+
+      <Route path="/admin-dashboard" element={<AdminLayout />}>
+        <Route index element={<Dashboard />} />
+
+        <Route path="cows" element={<CattleManagement />} />
+        <Route path="feed-plan" element={<Feedplan />} />
+        <Route path="intake" element={<FoodIntake/>}/> 
+        <Route path="cow-death" element={<CowDeath/>}/>
+         <Route path="sold" element={<Sellrecord/>}/>
+      </Route>
+      <Route path="cows/create" element={<CreateCow />} />
+        <Route path="/create-food-intake" element={<CreateFoodIntake/>  } />
+        <Route path="/cowdeath/search" element={<CowDeathSearch/>}/>
+        <Route path="/cowdeath/record" element={<CowDeathRecord/>}/>
+        <Route path="/sold/create" element={<CreateSellRecord/>} />
+    </Routes>
   );
-}
+};
 
 export default App;
