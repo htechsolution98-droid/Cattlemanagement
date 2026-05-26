@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import axiosInstance from "./api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 
 const CowDeath = () => {
@@ -8,12 +8,10 @@ const CowDeath = () => {
 
   const getDeaths = async () => {
     try {
-      const res = await axios.get(
-  "https://cattlemanagement.runasp.net/gaushala/CowDeath/Record",
-  {
-    withCredentials: true
-  }
-);
+      const res = await axiosInstance
+      .get("/gaushala/CowDeath/Record", {
+        withCredentials: true,
+      });
 
       console.log("API Response:", res.data);
 
@@ -26,8 +24,8 @@ const CowDeath = () => {
     }
   };
   useEffect(() => {
-  getDeaths();
-}, []);
+    getDeaths();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 p-6">
@@ -43,7 +41,7 @@ const CowDeath = () => {
         </div>
 
         <button
-          onClick={() => navigate("/cowdeath/search")}
+          onClick={() => navigate("/admin-dashboard/cowdeath/search")}
           className="bg-slate-500 hover:bg-black text-white px-3 py-3 rounded-2xl shadow-xl text-lg font-bold transition duration-300"
         >
           + Add Record
@@ -81,10 +79,14 @@ const CowDeath = () => {
                     <td className="p-3">
                       {item.registrationNo || item.RegistrationNo}
                     </td>
-                    <td className="p-3">{item.animalType ||item.AnimalType}</td>
-                    <td className="p-3">{item.deathDate ||item.DeathDate}</td>
-                    <td className="p-3">{item.reason ||item.Reason}</td>
-                    <td className="p-3">{item.disposalMethod||item.DisposalMethod}</td>
+                    <td className="p-3">
+                      {item.animalType || item.AnimalType}
+                    </td>
+                    <td className="p-3">{item.deathDate || item.DeathDate}</td>
+                    <td className="p-3">{item.reason || item.Reason}</td>
+                    <td className="p-3">
+                      {item.disposalMethod || item.DisposalMethod}
+                    </td>
                   </tr>
                 ))
               ) : (

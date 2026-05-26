@@ -1,6 +1,6 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import axiosInstance from "./api/axiosInstance";
 
 const CreateSellRecord = () => {
   const navigate = useNavigate();
@@ -19,64 +19,54 @@ const CreateSellRecord = () => {
 
   // ...existing code...
   const getAnimals = async () => {
-    try {
-      const url = "https://cattlemanagement.runasp.net/gaushala/CowSold/Create";
+    const url = "/gaushala/CowSold/Create";
 
-      const res = await axios.get(url, {
-        withCredentials: true,
-        headers: {
-          Accept: "application/xml, application/json, text/plain, */*",
-        },
-      });
+    const res = await axiosInstance.get(url, {
+      withCredentials: true,
+      headers: {
+        Accept: "application/xml, application/json, text/plain, */*",
+      },
+    });
 
-      console.log("getAnimals response", res.status, res.headers, res.data);
+    console.log("getAnimals response", res.status, res.headers, res.data);
 
-      if (res.status === 302) {
-        throw new Error("Redirected by server. Check authentication or endpoint URL.");
-      }
-
-      let apiData = [];
-      if (typeof res.data === "string") {
-        const text = res.data.trim();
-        if (text.startsWith("<")) {
-          const parser = new DOMParser();
-          const xml = parser.parseFromString(text, "application/xml");
-          const items = Array.from(xml.querySelectorAll("Item"));
-          apiData = items.map((item) => ({
-            Id: item.querySelector("Id")?.textContent,
-            Name: item.querySelector("Name")?.textContent,
-            AnimalType: item.querySelector("AnimalType")?.textContent,
-            RegistrationNo: item.querySelector("RegistrationNo")?.textContent,
-          }));
-        } else {
-          console.warn("Unexpected text response from API:", text);
-        }
-      } else if (Array.isArray(res.data)) {
-        apiData = res.data;
-      } else if (res.data?.data) {
-        apiData = res.data.data;
-      }
-
-      const localData = JSON.parse(localStorage.getItem("cattleData")) || [];
-      const finalData = [...apiData, ...localData];
-
-      const filtered = finalData.filter(
-        (item) => item.AnimalType?.toLowerCase() === animalType.toLowerCase(),
+    if (res.status === 302) {
+      throw new Error(
+        "Redirected by server. Check authentication or endpoint URL.",
       );
-
-      setAnimalList(filtered);
-    } catch (error) {
-      console.log("getAnimals error", error?.response?.status, error?.response?.data || error.message);
-
-      const localData = JSON.parse(localStorage.getItem("cattleData")) || [];
-      const filtered = localData.filter(
-        (item) => item.AnimalType?.toLowerCase() === animalType.toLowerCase(),
-      );
-
-      setAnimalList(filtered);
     }
+
+    let apiData = [];
+    if (typeof res.data === "string") {
+      const text = res.data.trim();
+      if (text.startsWith("<")) {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "application/xml");
+        const items = Array.from(xml.querySelectorAll("Item"));
+        apiData = items.map((item) => ({
+          Id: item.querySelector("Id")?.textContent,
+          Name: item.querySelector("Name")?.textContent,
+          AnimalType: item.querySelector("AnimalType")?.textContent,
+          RegistrationNo: item.querySelector("RegistrationNo")?.textContent,
+        }));
+      } else {
+        console.warn("Unexpected text response from API:", text);
+      }
+    } else if (Array.isArray(res.data)) {
+      apiData = res.data;
+    } else if (res.data?.data) {
+      apiData = res.data.data;
+    }
+
+    const finalData = [...apiData];
+
+    const filtered = finalData.filter(
+      (item) => item.AnimalType?.toLowerCase() === animalType.toLowerCase(),
+    );
+
+    setAnimalList(filtered);
   };
-// ...existing code...
+  // ...existing code...
 
   useEffect(() => {
     if (animalType) {
@@ -93,16 +83,12 @@ const CreateSellRecord = () => {
         ...formData,
       };
 
-      await axios.post(
-        "https://cattlemanagement.runasp.net/gaushala/CowSold/Save",
-        payload,
-      );
+      await axiosInstance.post("/gaushala/CowSold/Save", payload);
 
       const existingSold = JSON.parse(localStorage.getItem("soldData")) || [];
 
       const updatedSold = [...existingSold, payload];
 
-      localStorage.setItem("soldData", JSON.stringify(updatedSold));
 
       alert("Sold Record Saved");
 
@@ -138,7 +124,7 @@ const CreateSellRecord = () => {
 
           {/* SELECT NAME */}
           <div>
-            <label>Animal Name</label>
+            <label>Owner Name</label>
 
             <select
               className="w-full border p-3 rounded-xl"

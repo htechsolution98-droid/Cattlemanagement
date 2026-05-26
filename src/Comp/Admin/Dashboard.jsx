@@ -1,13 +1,13 @@
-import axios from "axios";
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axiosInstance from "./api/axiosInstance";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
   const handlelogout = async () => {
-    await axios.post(
-      "https://cattlemanagement.runasp.net/gaushala/Auth/Logout",
+    await axiosInstance.post(
+      "/gaushala/Auth/Logout",
     );
 
     localStorage.removeItem("token");

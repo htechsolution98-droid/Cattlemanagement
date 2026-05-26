@@ -1,72 +1,58 @@
-import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import axiosInstance from "./api/axiosInstance";
 
 const Adminlogin = () => {
   const navigate = useNavigate();
-
   const [form, setForm] = useState({
     username: "",
     password: "",
   });
-
   const [message, setMessage] = useState("");
-
   const handlechange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  useEffect(() => {
-    const interceptor = axios.interceptors.request.use((req) => {
-      const token = localStorage.getItem("token");
-
-      if (token) {
-        req.headers.Authorization = `Bearer ${token}`;
-      }
-
-      return req;
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
     });
-
-    return () => {
-      axios.interceptors.request.eject(interceptor);
-    };
-  }, []);
-
-  const handlesubmit = async (e) => {
-    e.preventDefault();
-
-    setMessage("");
-
-    try {
-      const res = await axios.post(
-        "https://cattlemanagement.runasp.net/gaushala/Auth/Login",
-        {
-          Username: form.username,
-          Password: form.password,
-        },
-      );
-
-      console.log("API Response:", res.data);
-
-      if (res.data) {
-        setMessage("Login Successfully");
-
-        localStorage.setItem("token", res.data.token || "admin");
-
-        navigate("/admin-dashboard");
-      }
-    } catch (error) {
-      console.log(error);
-
-      if (error.response) {
-        setMessage(
-          error.response.data.message || "Invalid Username or Password",
-        );
-      } else {
-        setMessage("Server Error");
-      }
-    }
   };
+const handlesubmit = async (e) => {
+  e.preventDefault();
+  setMessage("");
+
+  try {
+    const res = await axiosInstance.post(
+      "/gaushala/Auth/Login",
+      {
+        Username: form.username,
+        Password: form.password,
+      },
+      {
+        withCredentials: true, 
+      }
+    );
+
+    console.log("Login Response:", res.data);
+
+    if (res.data && res.data.success) {
+      
+      const tokenToSave = res.data.token || "logged_in_" + res.data.role;
+      localStorage.setItem("token", tokenToSave);
+
+      setMessage("Login Successfully");
+      navigate("/admin-dashboard");
+    } else {
+      setMessage(res.data.message || "Invalid Username or Password");
+    }
+  } catch (error) {
+    console.log(error);
+    if (error.response && error.response.data) {
+      setMessage(error.response.data.message || "Invalid Username or Password");
+    } else {
+      setMessage("Server Error");
+    }
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 px-4">

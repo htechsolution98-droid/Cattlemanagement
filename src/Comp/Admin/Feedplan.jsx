@@ -1,15 +1,13 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
+import axiosInstance from "./api/axiosInstance";
 
 const Feedplan = () => {
   const [feedDate, setFeedDate] = useState("");
-  const [animalType, setAnimalType] = useState("cow");
+  const [animalType, setAnimalType] = useState("Cow");
 
   const [showForm, setShowForm] = useState(false);
 
   const [feedData, setFeedData] = useState([]);
-
-  const [editId, setEditId] = useState(null);
 
   const [form, setForm] = useState({
     CowName: "",
@@ -21,27 +19,25 @@ const Feedplan = () => {
 
   const getFeedData = async () => {
     try {
-      const res = await axios.get(
-        `https://cattlemanagement.runasp.net/gaushala/CowFood/Index?feedDate=${feedDate}&animalType=${animalType}`,
+      const res = await axiosInstance.get(
+        `/gaushala/CowFood/Index?FeedDate=${feedDate}&AnimalType=${animalType}`,
       );
+
+      console.log("Feed Data:", res.data);
 
       const apiData = Array.isArray(res.data) ? res.data : res.data?.data || [];
 
-      const localData = JSON.parse(localStorage.getItem("feedPlanData")) || [];
-
-      setFeedData([...apiData, ...localData]);
+      setFeedData(apiData);
     } catch (error) {
       console.log(error);
-
-      const localData = JSON.parse(localStorage.getItem("feedPlanData")) || [];
-
-      setFeedData(localData);
     }
   };
 
   useEffect(() => {
-    getFeedData();
-  }, []);
+    if (feedDate) {
+      getFeedData();
+    }
+  }, [feedDate, animalType]);
 
   const handleChange = (e) => {
     setForm({
@@ -50,76 +46,69 @@ const Feedplan = () => {
     });
   };
 
-  const handleGenerate = async () => {
-    try {
-      await axios.get(
-        `https://cattlemanagement.runasp.net/gaushala/CowFood/Generate?feedDate=${feedDate}&animalType=${animalType}`,
-      );
-
-      setShowForm(true);
-
-      alert("Feed Plan Generated Successfully");
-    } catch (error) {
-      console.log(error);
+  const handleGenerate = () => {
+    if (!feedDate) {
+      alert("Please Select Feed Date");
+      return;
     }
-  };
-  const handleSave = (e) => {
-    e.preventDefault();
-
-    const oldData = JSON.parse(localStorage.getItem("feedPlanData")) || [];
-
-    let updatedData = [];
-
-    if (editId) {
-      updatedData = oldData.map((item) =>
-        item.id === editId ? { ...form, id: editId } : item,
-      );
-    } else {
-      const newData = {
-        id: Date.now(),
-        ...form,
-      };
-
-      updatedData = [...oldData, newData];
-    }
-
-    localStorage.setItem("feedPlanData", JSON.stringify(updatedData));
-
-    setFeedData(updatedData);
-
-    setForm({
-      CowName: "",
-      MilkDate: "",
-      TotalMilk: "",
-      FeedDate: "",
-      RequiredFood: "",
-    });
-
-    setEditId(null);
-
-    setShowForm(false);
-
-    alert(editId ? "Feed Plan Updated" : "Feed Plan Saved");
-  };
-
-  const handleEdit = (item) => {
-    setForm(item);
-
-    setEditId(item.id);
 
     setShowForm(true);
   };
+  const handleSave = async (e) => {
+    e.preventDefault();
 
-  const handleDelete = (id) => {
-    const oldData = JSON.parse(localStorage.getItem("feedPlanData")) || [];
+    try {
+      const formData = new URLSearchParams();
 
-    const updatedData = oldData.filter((item) => item.id !== id);
+      formData.append("CowName", form.CowName);
+      formData.append("MilkDate", form.MilkDate);
+      formData.append("TotalMilk", form.TotalMilk);
+      formData.append("FeedDate", form.FeedDate);
+      formData.append("RequiredFood", form.RequiredFood);
 
-    localStorage.setItem("feedPlanData", JSON.stringify(updatedData));
+      const res = await axiosInstance.post(
+        "/gaushala/CowFood/Generate",
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        },
+      );
 
-    setFeedData(updatedData);
+      console.log("SAVE RESPONSE:", res.data);
 
-    alert("Feed Plan Deleted");
+      alert("Feed Plan Saved Successfully");
+
+      getFeedData();
+
+      setShowForm(false);
+
+      setForm({
+        CowName: "",
+        MilkDate: "",
+        TotalMilk: "",
+        FeedDate: "",
+        RequiredFood: "",
+      });
+    } catch (error) {
+      console.log(error);
+
+      alert("Save API Error");
+    }
+  };
+  const handleDelete = async (id) => {
+    try {
+      await axiosInstance.post("/gaushala/CowFood/Delete", {
+        Id: id,
+      });
+
+      alert("Feed Plan Deleted");
+
+      getFeedData();
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -131,13 +120,8 @@ const Feedplan = () => {
         🐄 Cow Feed Plan
       </h1>
 
-      <div
-        className="card shadow border-0 rounded-4 p-4 mb-4"
-        style={{
-          background: "#ffffff",
-          fontFamily: "'Poppins', sans-serif",
-        }}
-      >
+      {/* FILTER SECTION */}
+      <div className="card shadow border-0 rounded-4 p-4 mb-4">
         <div className="row g-3 align-items-center">
           <div className="col-md-4">
             <label className="fw-semibold mb-2 ms-2">Select Date</label>
@@ -158,8 +142,9 @@ const Feedplan = () => {
               value={animalType}
               onChange={(e) => setAnimalType(e.target.value)}
             >
-              <option value="cow">Cow</option>
-              <option value="buffalo">Buffalo</option>
+              <option value="Cow">Cow</option>
+
+              <option value="Buffalo">Buffalo</option>
             </select>
           </div>
 
@@ -179,6 +164,7 @@ const Feedplan = () => {
         </div>
       </div>
 
+      {/* GENERATE SECTION */}
       <div className="card shadow border-0 rounded-4 p-4 mb-4">
         <div className="row g-3 align-items-end">
           <div className="col-md-6">
@@ -208,11 +194,10 @@ const Feedplan = () => {
         </div>
       </div>
 
+      {/* FORM */}
       {showForm && (
         <div className="card shadow border-0 rounded-4 p-4 mb-4">
-          <h3 className="fw-bold mb-4 text-primary">
-            {editId ? "Edit Feed Plan" : "Generate Feed Plan"}
-          </h3>
+          <h3 className="fw-bold mb-4 text-primary">Save Feed Plan</h3>
 
           <form onSubmit={handleSave}>
             <div className="row">
@@ -283,17 +268,13 @@ const Feedplan = () => {
             </div>
 
             <div className="d-flex gap-2 mt-3">
-              <button className="btn btn-success px-4">
-                {editId ? "Update Feed Plan" : "Save Feed Plan"}
-              </button>
+              <button className="btn btn-success px-4">Save Feed Plan</button>
 
               <button
                 type="button"
                 className="btn btn-secondary px-4"
                 onClick={() => {
                   setShowForm(false);
-
-                  setEditId(null);
 
                   setForm({
                     CowName: "",
@@ -311,6 +292,7 @@ const Feedplan = () => {
         </div>
       )}
 
+      {/* TABLE */}
       <div className="card shadow border-0 rounded-4 p-4">
         <div className="table-responsive">
           <table className="table table-bordered table-hover text-center align-middle">
@@ -331,28 +313,24 @@ const Feedplan = () => {
                 feedData.map((item, index) => (
                   <tr key={index}>
                     <td>{index + 1}</td>
+
                     <td>{item.CowName}</td>
+
                     <td>{item.MilkDate}</td>
+
                     <td>{item.TotalMilk}</td>
+
                     <td>{item.FeedDate}</td>
+
                     <td>{item.RequiredFood}</td>
 
                     <td>
-                      <div className="d-flex justify-content-center gap-2">
-                        <button
-                          className="btn btn-warning btn-sm"
-                          onClick={() => handleEdit(item)}
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDelete(item.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleDelete(item.Id)}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))

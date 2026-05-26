@@ -1,6 +1,6 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import axiosInstance from "./api/axiosInstance";
 
 const CreateFoodIntake = () => {
   const navigate = useNavigate();
@@ -26,8 +26,8 @@ const CreateFoodIntake = () => {
 
   const getAnimals = async (type) => {
     try {
-      const res = await axios.get(
-        `https://cattlemanagement.runasp.net/gaushala/CowFoodIntake/GetAnimalsByType?animalType=${type}`,
+      const res = await axiosInstance.get(
+        `/gaushala/CowFoodIntake/GetAnimalsByType?animalType=${type}`,
       );
 
       const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
@@ -58,8 +58,10 @@ const CreateFoodIntake = () => {
 
     setForm({
       ...form,
+
       AnimalID: selectedId,
-      animalName:
+
+      AnimalName:
         selectedAnimal?.name ||
         selectedAnimal?.Name ||
         selectedAnimal?.animalName ||
@@ -70,52 +72,49 @@ const CreateFoodIntake = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const payload = {
-      Id: editData?.id || 0,
-      AnimalId: form.AnimalId,
-      AnimalName: form.AnimalName,
-      AnimalType: form.AnimalType,
-      RecordDate: form.RecordDate,
-      MorningFoodKg: form.MorningFoodKg,
-      AfternoonFoodKg: form.AfternoonFoodKg,
-      EveningFoodKg: form.EveningFoodKg,
-      Remark: form.Remark,
-    };
-    await axios.post(
-      "https://cattlemanagement.runasp.net/gaushala/CowFoodIntake/Save",
-      payload,
-    );
-    const oldData = JSON.parse(localStorage.getItem("foodIntakeData")) || [];
 
-    let updatedData = [];
+    try {
+      const payload = {
+        Id: editData?.Id || 0,
 
-    if (editData) {
-      updatedData = oldData.map((item) =>
-        item.id === editData.id
-          ? {
-              ...form,
-              id: editData.id,
-            }
-          : item,
-      );
-    } else {
-      const newData = {
-        id: Date.now(),
-        ...form,
+        AnimalId: form.AnimalID,
+
+        AnimalName: form.AnimalName,
+
+        AnimalType: form.AnimalType,
+
+        RecordDate: form.RecordDate,
+
+        MorningFoodKg: form.MorningFoodKg,
+
+        AfternoonFoodKg: form.AfternoonFoodKg,
+
+        EveningFoodKg: form.EveningFoodKg,
+
+        Remark: form.Remark,
       };
 
-      updatedData = [...oldData, newData];
+      console.log("SAVE PAYLOAD:", payload);
+
+      const res = await axiosInstance.post(
+        "/gaushala/CowFoodIntake/Save",
+        payload,
+      );
+
+      console.log("SAVE RESPONSE:", res.data);
+
+      alert(
+        editData
+          ? "Food Intake Updated Successfully"
+          : "Food Intake Saved Successfully",
+      );
+
+      navigate("/admin-dashboard/intake");
+    } catch (error) {
+      console.log(error);
+
+      alert("Save API Error");
     }
-
-    localStorage.setItem("foodIntakeData", JSON.stringify(updatedData));
-
-    alert(
-      editData
-        ? "Food Intake Updated Successfully"
-        : " Food Intake Saved Successfully",
-    );
-
-    navigate("/admin-dashboard/intake");
   };
   return (
     <div
@@ -202,7 +201,7 @@ const CreateFoodIntake = () => {
 
                     <select
                       className="form-select form-select-lg shadow-sm"
-                      value={form.CowId}
+                      value={form.AnimalID}
                       onChange={handleAnimalSelect}
                       style={{
                         borderRadius: "14px",

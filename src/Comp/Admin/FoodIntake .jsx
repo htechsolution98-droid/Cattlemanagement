@@ -1,328 +1,140 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "./api/axiosInstance";
 
 const FoodIntake = () => {
   const [animalType, setAnimalType] = useState("cow");
-
   const [foodData, setFoodData] = useState([]);
 
   const navigate = useNavigate();
 
+  // GET DATA
   const getFoodData = async () => {
-    try {
-      const res = await axios.get(
-        `https://cattlemanagement.runasp.net/gaushala/CowFoodIntake/Index?animalType=${animalType}`,
-      );
+    const res = await axiosInstance.get(
+      `/gaushala/CowFoodIntake/Index?AnimalType=${animalType}`,
+    );
 
-      const apiData = Array.isArray(res.data) ? res.data : res.data?.data || [];
+    const apiData = Array.isArray(res.data) ? res.data : res.data?.data || [];
 
-      const localData =
-        JSON.parse(localStorage.getItem("foodIntakeData")) || [];
-
-      setFoodData([...apiData, ...localData]);
-    } catch (error) {
-      console.log(error);
-
-      const localData =
-        JSON.parse(localStorage.getItem("foodIntakeData")) || [];
-
-      setFoodData(localData);
-    }
+    setFoodData([...apiData]);
   };
 
   useEffect(() => {
     getFoodData();
   }, [animalType]);
 
-  const handleDelete = (id) => {
-    const oldData = JSON.parse(localStorage.getItem("foodIntakeData")) || [];
+  const handleDelete = async (id) => {
+    try {
+      await axiosInstance.post("/gaushala/CowFoodIntake/Delete", {
+        Id: id,
+      });
 
-    const updatedData = oldData.filter((item) => item.id !== id);
+      alert("Record Deleted");
 
-    localStorage.setItem("foodIntakeData", JSON.stringify(updatedData));
+      getFoodData();
+    } catch (error) {
+      console.log(error);
 
-    setFoodData(updatedData);
+      alert("Delete API Error");
+    }
   };
 
   return (
-    <div
-      className="container-fluid p-2 p-md-4 min-vh-100"
-      style={{
-        background: "linear-gradient(135deg,#f1f5ff,#fdf2f8,#ecfeff)",
-        fontFamily: "'Poppins', sans-serif",
-      }}
-    >
-      <div
-        className="card shadow border-0 rounded-4 p-2 mb-4"
-        style={{
-          background: "#ffffff",
-        }}
-      >
-        <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-          <h2
-            className="fw-bold mb-2 p-2"
-            style={{
-              color: "#4f46e5",
-            }}
-          >
-            Cow Food Intake Records
-          </h2>
+    <div className="container-fluid p-3 min-vh-100 bg-light">
+      {/* HEADER */}
+      <div className="bg-white shadow rounded-4 p-3 mb-4">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <h3 className="fw-bold text-primary m-0">Cow Food Intake Records</h3>
 
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 flex-wrap">
             <select
               className="form-select"
               value={animalType}
               onChange={(e) => setAnimalType(e.target.value)}
-              style={{
-                borderRadius: "12px",
-                border: "1px solid #dbeafe",
-                padding: "10px",
-                minWidth: "180px",
-              }}
+              style={{ minWidth: "160px" }}
             >
-              <option value="All">Select Option</option>
               <option value="cow">Cow</option>
               <option value="buffalo">Buffalo</option>
             </select>
 
-            <button
-              className="btn btn-success p-2"
-              onClick={getFoodData}
-              style={{
-                borderRadius: "12px",
-                width: "150px",
-                background: "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                border: "none",
-              }}
-            >
+            <button className="btn btn-primary" onClick={getFoodData}>
               Show
             </button>
-          </div>
 
-          <button
-            className="btn btn-success px-4"
-            onClick={() => navigate("/create-food-intake")}
-            style={{
-              borderRadius: "12px",
-              height: "46px",
-              background: "linear-gradient(135deg,#06b6d4 0%, #3b82f6 100%)",
-              border: "none",
-            }}
-          >
-            + Add New Record
-          </button>
+            <button
+              className="btn btn-success"
+              onClick={() => navigate("/admin-dashboard/create-food-intake")}
+            >
+              + Add New
+            </button>
+          </div>
         </div>
       </div>
 
-      <div
-      className="card shadow border-0 rounded-4 p-2 overflow-hidden"
-        style={{
-          background: "#ffffff",
-        }}
-      >
-        <div className="table-responsive rounded-4">
+      {/* TABLE WRAPPER (IMPORTANT FIX) */}
+      <div className="bg-white shadow rounded-4 p-2">
+        {/* SCROLL WRAPPER */}
+        <div className="w-full overflow-x-auto">
           <table
-            className="table table-bordered align-middle text-center"
-            style={{ overflowX: "auto",}}
+            className="table table-bordered align-middle text-center w-full"
+            style={{
+              tableLayout: "fixed", 
+              minWidth: "800px",
+            }}
           >
-            <thead
-              style={{
-                background: "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-              }}
-            >
+            <thead className="table-dark">
               <tr>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                  }}
-                >
-                  ID
-                </th>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Animal Name
-                </th>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Date
-                </th>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Morning Food(kg)
-                </th>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Afternoon Food(kg)
-                </th>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Evening Food(kg)
-                </th>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Remark
-                </th>
-                <th
-                  className="p-2 md:p-4"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#667eea 0%, #764ba2 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Action
-                </th>
+                <th style={{ width: "50px" }}>ID</th>
+                <th>Animal Name</th>
+                <th>Date</th>
+                <th>Morning</th>
+                <th>Afternoon</th>
+                <th>Evening</th>
+                <th>Remark</th>
+                <th style={{ width: "120px" }}>Action</th>
               </tr>
             </thead>
 
             <tbody>
               {foodData.length > 0 ? (
                 foodData.map((item, index) => (
-                  <tr
-                    key={index}
-                    style={{
-                      borderBottom: "1px solid #e2e8f0",
-                    }}
-                  >
-                    <td
-                      className="p-2 md:p-4"
-                      style={{
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                      }}
-                    >
-                      {index + 1}
-                    </td>
+                  <tr key={index}>
+                    <td style={{ fontSize: "13px" }}>{index + 1}</td>
 
                     <td
-                      className="p-2 md:p-4"
                       style={{
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
+                        fontSize: "13px",
+                        wordBreak: "break-word",
                       }}
                     >
                       {item.AnimalName}
                     </td>
 
-                    <td
-                      className="p-2 md:p-4"
-                      style={{
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                      }}
-                    >
-                      {item.RecordDate}
-                    </td>
+                    <td style={{ fontSize: "13px" }}>{item.RecordDate}</td>
+
+                    <td style={{ fontSize: "13px" }}>{item.MorningFoodKg}</td>
+
+                    <td style={{ fontSize: "13px" }}>{item.AfternoonFoodKg}</td>
+
+                    <td style={{ fontSize: "13px" }}>{item.EveningFoodKg}</td>
 
                     <td
-                      className="p-2 md:p-4"
                       style={{
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                      }}
-                    >
-                      {item.MorningFoodKg}
-                    </td>
-
-                    <td
-                      className="p-2 md:p-4"
-                      style={{
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                      }}
-                    >
-                      {item.AfternoonFoodKg}
-                    </td>
-
-                    <td
-                      className="p-2 md:p-4"
-                      style={{
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
-                      }}
-                    >
-                      {item.EveningFoodKg}
-                    </td>
-
-                    <td
-                      className="p-2 md:p-4"
-                      style={{
-                        whiteSpace: "nowrap",
-                        fontSize: "14px",
+                        fontSize: "13px",
+                        wordBreak: "break-word",
+                        maxWidth: "180px",
                       }}
                     >
                       {item.Remark}
                     </td>
 
-                    <td className="p-2 md:p-4">
-                      <div className="d-flex flex-column flex-md-row justify-content-center gap-2">
+                    <td>
+                      <div className="d-flex gap-1 justify-content-center flex-wrap">
                         <button
-                          className="btn btn-sm text-white px-2"
-                          style={{
-                            borderRadius: "10px",
-                            background:
-                              "linear-gradient(135deg,#f59e0b,#f97316)",
-                            border: "none",
-                          }}
+                          className="btn btn-warning btn-sm"
                           onClick={() =>
-                            navigate("/create-food-intake", {
-                              state: {
-                                editData: item,
-                              },
+                            navigate("/admin-dashboard/create-food-intake", {
+                              state: { editData: item },
                             })
                           }
                         >
@@ -330,14 +142,8 @@ const FoodIntake = () => {
                         </button>
 
                         <button
-                          className="btn btn-sm text-white px-3"
-                          style={{
-                            borderRadius: "10px",
-                            background:
-                              "linear-gradient(135deg,#ef4444,#dc2626)",
-                            border: "none",
-                          }}
-                          onClick={() => handleDelete(item.id)}
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleDelete(item.Id)}
                         >
                           Delete
                         </button>
@@ -347,7 +153,9 @@ const FoodIntake = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7">No Records Found</td>
+                  <td colSpan="8" className="text-center py-3">
+                    No Records Found
+                  </td>
                 </tr>
               )}
             </tbody>

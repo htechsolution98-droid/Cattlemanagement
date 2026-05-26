@@ -1,46 +1,66 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import axiosInstance from "./api/axiosInstance";
 
 const CreateCow = () => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
-const location = useLocation();
+  const location = useLocation();
 
-const editData = location.state?.cowData;
-const editIndex = location.state?.editIndex;
-  const [form, setForm] = useState(editData||{
-    Name: "",
-    RegistrationNo:"",
-    AnimalType: "",
-    Dob: "",
-    PurchaseDate: "",
-    PurchaseFrom: "",
-    PurchaseAddress: "",
-    MobileNo: "",
-    PurchasePrice: "",
-    GovernmentTagNo: "",
-    Gender: "Female",
-    FatherName: "",
-    MotherName: "",
-    FatherFatherName: "",
-    FatherMotherName: "",
-    MotherFatherName: "",
-    MotherMotherName: "",
-    IsActiveForMilk: false,
-    FirstImageFile: null,
-    SecondImageFile: null,
-  });
+  const editData = location.state?.cowData;
+  const editIndex = location.state?.editIndex;
 
-  const [recordsList, setRecordsList] = useState([]);
+  const [form, setForm] = useState(
+    editData || {
+      Id: 0,
+      CowId: 0,
+      Name: "",
+      RegistrationNo: "",
+      CreatedAt: "",
+      AnimalType: "Cow",
+      IsSold: false,
+      SoldDate: "",
+      SoldPrice: "",
+      SoldPersonName: "",
+      SoldPersonAddress: "",
+      SoldPersonPhoneNo: "",
+      Dob: "",
+      PurchaseDate: "",
+      PurchaseFrom: "",
+      PurchaseAddress: "",
+      MobileNo: "",
+      PurchasePrice: "",
+      GovernmentTagNo: "",
+      FatherName: "",
+      MotherName: "",
+      FatherFatherName: "",
+      FatherMotherName: "",
+      MotherFatherName: "",
+      MotherMotherName: "",
+      Gender: "Female",
+      IsActiveForMilk: false,
+      FirstImagePath: "",
+      SecondImagePath: "",
+      FirstImageFile: null,
+      SecondImageFile: null,
+      reproJson: "",
+    },
+  );
+
+  const [recordsList, setRecordsList] = useState(
+    editData?.ReproRecords || editData?.ReproductionRecords || [],
+  );
+
   const [record, setRecord] = useState({
+    ReproId: 0,
+    CowId: 0,
     HeatComingDate: "",
     AIDate: "",
-    AIBull: "",
-    Bull: "",
-    Doctor: "",
-    PregCheck: "",
+    AIBullName: "",
+    BullName: "",
+    DrName: "",
+    PregnancyCheckDate: "",
     PregnancyStatus: "",
     DeliveryDate: "",
     CalfName: "",
@@ -56,23 +76,37 @@ const editIndex = location.state?.editIndex;
     });
   };
 
-  const handleRecordChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setRecord({
-      ...record,
-      [name]: type === "radio" ? value : value,
-    });
+  const handleRecordChange = async (e) => {
+    const { name, value } = e.target;
+
+    setRecord((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (name === "PregnancyStatus") {
+      try {
+        console.log(`Pregnancy Status Changed to: ${value}. Calling API...`);
+        const response = await axiosInstance.get("/gaushala/Cow/Pregnant");
+        console.log("Pregnant API Response:", response.data);
+      } catch (error) {
+        console.error("Error calling Pregnant API:", error);
+        alert("Error fetching data from pregnant API");
+      }
+    }
   };
 
   const handleAddRecordTable = () => {
     setRecordsList([...recordsList, record]);
     setRecord({
+      ReproId: 0,
+      CowId: 0,
       HeatComingDate: "",
       AIDate: "",
-      AIBull: "",
-      Bull: "",
-      Doctor: "",
-      PregCheck: "",
+      AIBullName: "",
+      BullName: "",
+      DrName: "",
+      PregnancyCheckDate: "",
       PregnancyStatus: "",
       DeliveryDate: "",
       CalfName: "",
@@ -81,75 +115,157 @@ const editIndex = location.state?.editIndex;
     setShowModal(false);
   };
 
-  const handleSubmitAllData = async (e) => {
-    e.preventDefault();
+  const handleDeleteCattle = async () => {
+    if (!editData || !editData.Id) return;
+
+    const confirmDelete = window.confirm(`? ${form.Name || ""}`);
+    if (!confirmDelete) return;
 
     try {
-      const formData = new FormData();
+      await axiosInstance.post("/gaushala/Cow/Delete", { id: editData.Id });
 
-      Object.keys(form).forEach((key) => {
-        formData.append(key, form[key]);
-      });
+      const existingData = JSON.parse(localStorage.getItem("cattleData")) || [];
+      const updatedData = existingData.filter((_, idx) => idx !== editIndex);
+      localStorage.setItem("cattleData", JSON.stringify(updatedData));
 
-      formData.append("ReproductionRecords", JSON.stringify(recordsList));
-
-      await axios.post(
-        "https://cattlemanagement.runasp.net/gaushala/Cow/Create",
-        formData,
-      );
-
-      // NEW DATA OBJECT
-      const newCattle = {
-        id: Date.now(),
-        ...form,
-        ReproductionRecords: recordsList,
-      };
-const existingData =
-  JSON.parse(localStorage.getItem("cattleData")) || [];
-
-if (editData) {
-  existingData[editIndex] = {
-    ...form,
-    id: editData.id,
-    ReproductionRecords: recordsList,
-  };
-
-  localStorage.setItem(
-    "cattleData",
-    JSON.stringify(existingData),
-  );
-} else {
-  const newCattle = {
-    id: Date.now(),
-    ...form,
-    ReproductionRecords: recordsList,
-  };
-
-  const updatedData = [...existingData, newCattle];
-
-  localStorage.setItem(
-    "cattleData",
-    JSON.stringify(updatedData),
-  );
-}
-      alert("Cattle created successfully!");
-
+      alert("Cattle deleted successfully!");
       navigate("/admin-dashboard/cows");
     } catch (error) {
-      console.log(error);
-      alert("Error saving data");
+      console.error(error);
+      alert("Error deleting record");
     }
   };
 
+const handleSubmitAllData = async (e) => {
+  e.preventDefault();
+
+  try {
+    const formData = new FormData();
+
+    // Edit time only send Id
+    if (editData?.Id) {
+      formData.append("Id", editData.Id);
+    }
+
+    // Basic Info
+    formData.append("Name", form.Name || "");
+    formData.append("RegistrationNo", form.RegistrationNo || "");
+    formData.append("AnimalType", form.AnimalType || "Cow");
+
+    if (form.CreatedAt) {
+      formData.append("CreatedAt", new Date(form.CreatedAt).toISOString());
+    }
+
+    // Sold Info
+    formData.append("IsSold", form.IsSold ? "true" : "false");
+
+    if (form.IsSold) {
+      if (form.SoldDate) formData.append("SoldDate", form.SoldDate);
+      formData.append("SoldPrice", Number(form.SoldPrice || 0));
+      formData.append("SoldPersonName", form.SoldPersonName || "");
+      formData.append("SoldPersonAddress", form.SoldPersonAddress || "");
+      formData.append("SoldPersonPhoneNo", form.SoldPersonPhoneNo || "");
+    }
+
+    // Purchase Info
+    if (form.Dob) formData.append("Dob", form.Dob);
+    if (form.PurchaseDate) formData.append("PurchaseDate", form.PurchaseDate);
+
+    formData.append("PurchaseFrom", form.PurchaseFrom || "");
+    formData.append("PurchaseAddress", form.PurchaseAddress || "");
+    formData.append("MobileNo", form.MobileNo || "");
+    formData.append("PurchasePrice", Number(form.PurchasePrice || 0));
+    formData.append("GovernmentTagNo", form.GovernmentTagNo || "");
+
+    // Family Info
+    formData.append("FatherName", form.FatherName || "");
+    formData.append("MotherName", form.MotherName || "");
+    formData.append("FatherFatherName", form.FatherFatherName || "");
+    formData.append("FatherMotherName", form.FatherMotherName || "");
+    formData.append("MotherFatherName", form.MotherFatherName || "");
+    formData.append("MotherMotherName", form.MotherMotherName || "");
+    formData.append("Gender", form.Gender || "Female");
+    formData.append("IsActiveForMilk", form.IsActiveForMilk ? "true" : "false");
+
+    // Images
+    if (form.FirstImageFile instanceof File) {
+      formData.append("FirstImageFile", form.FirstImageFile);
+    }
+
+    if (form.SecondImageFile instanceof File) {
+      formData.append("SecondImageFile", form.SecondImageFile);
+    }
+
+    // Reproduction Records
+    const reproData = recordsList.map((item) => {
+      const obj = {
+        ReproId: Number(item.ReproId || 0),
+        CowId: Number(item.CowId || 0),
+        AIBullName: item.AIBullName || "",
+        BullName: item.BullName || "",
+        DrName: item.DrName || "",
+        PregnancyStatus: item.PregnancyStatus || "",
+        CalfName: item.CalfName || "",
+        Remark: item.Remark || "",
+      };
+
+      if (item.HeatComingDate) obj.HeatComingDate = item.HeatComingDate;
+      if (item.AIDate) obj.AIDate = item.AIDate;
+      if (item.PregnancyCheckDate) obj.PregnancyCheckDate = item.PregnancyCheckDate;
+      if (item.DeliveryDate) obj.DeliveryDate = item.DeliveryDate;
+
+      return obj;
+    });
+
+    formData.append("reproJson", JSON.stringify(reproData));
+
+    // Debug
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+
+    const response = await axiosInstance.post("/gaushala/Cow/Save", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    console.log("SUCCESS =>", response.data);
+
+    const savedCow = response.data?.data || response.data;
+
+    const generatedId = savedCow?.Id || savedCow?.CowId || savedCow?.id;
+
+    setForm((prev) => ({
+      ...prev,
+      Id: generatedId || prev.Id,
+    }));
+
+    alert("Cattle Saved Successfully");
+    navigate("/admin-dashboard/cows");
+  } catch (error) {
+    console.log("SAVE ERROR =>", error);
+    console.log("STATUS =>", error.response?.status);
+    console.log("ERROR DATA =>", error.response?.data);
+    console.log("ERRORS =>", error.response?.data?.errors);
+
+    alert(
+      error.response?.data?.message ||
+        JSON.stringify(error.response?.data?.errors) ||
+        "Error while saving cattle"
+    );
+  }
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-4 md:p-6">
       <div className="flex items-center gap-3 mb-6 bg-white/70 backdrop-blur-lg p-4 rounded-4 shadow-lg border border-white">
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 w-14 h-14 rounded-4 d-flex justify-content-center align-items-center">
           <i className="fa-solid fa-cow text-white fs-3"></i>
         </div>
-
         <div>
-          <h2 className="m-0 fw-bold text-dark">Create Cattle</h2>
+          <h2 className="m-0 fw-bold text-dark">
+            {editData ? "Edit Cattle" : "Create Cattle"}
+          </h2>
           <p className="text-muted m-0 small">
             Add new cow / buffalo information
           </p>
@@ -164,11 +280,11 @@ if (editData) {
           </div>
           <div className="card-body row text-muted">
             <div className="col-md-3 mb-2 ms-4 mt-2">
-              <label className="form-label small fw-bold ms-2 ">Cow Id</label>
+              <label className="form-label small fw-bold ms-2">Cow Id</label>
               <input
                 type="text"
                 className="form-control border-0 shadow-sm rounded-4 py-2"
-                value="(new)"
+                value={form.Id || "(new)"}
                 disabled
               />
             </div>
@@ -198,7 +314,7 @@ if (editData) {
               </select>
             </div>
             <div className="col-md-3 mb-2">
-              <label className="form-label small fw-bold ms-4  mb-3">
+              <label className="form-label small fw-bold ms-4 mb-3">
                 Reg No.
               </label>
               <input
@@ -206,6 +322,18 @@ if (editData) {
                 className="form-control border-0 shadow-sm rounded-4 py-2 ms-3"
                 name="RegistrationNo"
                 value={form.RegistrationNo}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="col-md-3 mb-2">
+              <label className="form-label small fw-bold ms-4 mb-3">
+                CreatedAt
+              </label>
+              <input
+                type="datetime-local"
+                className="form-control border-0 shadow-sm rounded-4 py-2 ms-3"
+                name="CreatedAt"
+                value={form.CreatedAt}
                 onChange={handleChange}
               />
             </div>
@@ -246,7 +374,7 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="PurchaseFrom"
                 value={form.PurchaseFrom}
                 onChange={handleChange}
@@ -258,20 +386,19 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="PurchaseAddress"
                 value={form.PurchaseAddress}
                 onChange={handleChange}
               />
             </div>
-
             <div className="col-md-3 mb-2">
               <label className="form-label small fw-bold ms-2">Mobile No</label>
               <input
                 type="text"
                 className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="MobileNo"
-                 value={form.MobileNo}
+                value={form.MobileNo}
                 onChange={handleChange}
               />
             </div>
@@ -281,7 +408,7 @@ if (editData) {
               </label>
               <input
                 type="number"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="PurchasePrice"
                 value={form.PurchasePrice}
                 onChange={handleChange}
@@ -293,19 +420,31 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="GovernmentTagNo"
                 value={form.GovernmentTagNo}
                 onChange={handleChange}
               />
             </div>
             <div className="col-md-3 mb-2">
-              <label className="form-label small fw-bold ms-2"> Image</label>
+              <label className="form-label small fw-bold ms-2">
+                First Image
+              </label>
               <input
                 type="file"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="FirstImageFile"
-                value={form.FirstImageFile}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="col-md-3 mb-2">
+              <label className="form-label small fw-bold ms-2">
+                Second Image
+              </label>
+              <input
+                type="file"
+                className="form-control border-0 shadow-sm rounded-4 py-2"
+                name="SecondImageFile"
                 onChange={handleChange}
               />
             </div>
@@ -322,7 +461,7 @@ if (editData) {
                   value="Male"
                   checked={form.Gender === "Male"}
                   onChange={handleChange}
-                />{" "}
+                />
                 <span className="small">Male</span>
               </div>
               <div className="form-check form-check-inline mt-1">
@@ -333,7 +472,7 @@ if (editData) {
                   value="Female"
                   checked={form.Gender === "Female"}
                   onChange={handleChange}
-                />{" "}
+                />
                 <span className="small">Female</span>
               </div>
             </div>
@@ -344,7 +483,7 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="FatherName"
                 value={form.FatherName}
                 onChange={handleChange}
@@ -356,9 +495,9 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="MotherName"
-                 value={form.MotherName}
+                value={form.MotherName}
                 onChange={handleChange}
               />
             </div>
@@ -368,9 +507,9 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="FatherFatherName"
-                 value={form.FatherFatherName}
+                value={form.FatherFatherName}
                 onChange={handleChange}
               />
             </div>
@@ -380,9 +519,9 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="FatherMotherName"
-                 value={form.FatherMotherName}
+                value={form.FatherMotherName}
                 onChange={handleChange}
               />
             </div>
@@ -392,9 +531,9 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="MotherFatherName"
-                 value={form.MotherFatherName}
+                value={form.MotherFatherName}
                 onChange={handleChange}
               />
             </div>
@@ -404,14 +543,14 @@ if (editData) {
               </label>
               <input
                 type="text"
-                className="form-control border-0 shadow-sm rounded-4 py-2 "
+                className="form-control border-0 shadow-sm rounded-4 py-2"
                 name="MotherMotherName"
-                 value={form.MotherMotherName}
+                value={form.MotherMotherName}
                 onChange={handleChange}
               />
             </div>
 
-            <div className="col-md-12 mt-2 form-check ms-3">
+            <div className="col-md-6 mt-2 form-check ms-3">
               <input
                 type="checkbox"
                 className="form-check-input"
@@ -426,6 +565,97 @@ if (editData) {
           </div>
         </div>
 
+        {/* NEW SECTION: Cattle Sale Information (Sold Data) */}
+        <div className="card mb-4 border-warning shadow-sm">
+          <div className="bg-gradient-to-r from-amber-500 to-orange-600 fs-5 text-white px-4 py-3 d-flex align-items-center justify-content-between">
+            <strong>Cattle Sale / Sold Information</strong>
+            <div className="form-check form-switch m-0">
+              <input
+                className="form-check-input bg-light border-secondary"
+                type="checkbox"
+                name="IsSold"
+                id="IsSold"
+                checked={form.IsSold}
+                onChange={handleChange}
+              />
+              <label
+                className="form-check-label text-white small fw-bold ms-1"
+                htmlFor="IsSold"
+              >
+                Cattle is Sold
+              </label>
+            </div>
+          </div>
+
+          {form.IsSold && (
+            <div className="card-body row text-muted bg-light/40">
+              <div className="col-md-3 mb-2">
+                <label className="form-label small fw-bold ms-2">
+                  Sold Date
+                </label>
+                <input
+                  type="date"
+                  className="form-control border-0 shadow-sm rounded-4 py-2"
+                  name="SoldDate"
+                  value={form.SoldDate}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="col-md-3 mb-2">
+                <label className="form-label small fw-bold ms-2">
+                  Sold Price
+                </label>
+                <input
+                  type="number"
+                  className="form-control border-0 shadow-sm rounded-4 py-2"
+                  name="SoldPrice"
+                  value={form.SoldPrice}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="col-md-3 mb-2">
+                <label className="form-label small fw-bold ms-2">
+                  Buyer Name (Sold Person)
+                </label>
+                <input
+                  type="text"
+                  className="form-control border-0 shadow-sm rounded-4 py-2"
+                  name="SoldPersonName"
+                  value={form.SoldPersonName}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="col-md-3 mb-2">
+                <label className="form-label small fw-bold ms-2">
+                  Buyer Phone No
+                </label>
+                <input
+                  type="text"
+                  className="form-control border-0 shadow-sm rounded-4 py-2"
+                  name="SoldPersonPhoneNo"
+                  value={form.SoldPersonPhoneNo}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="col-md-12 mb-2">
+                <label className="form-label small fw-bold ms-2">
+                  Buyer Address
+                </label>
+                <input
+                  type="text"
+                  className="form-control border-0 shadow-sm rounded-4 py-2"
+                  name="SoldPersonAddress"
+                  value={form.SoldPersonAddress}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* SECTION 3: Reproduction Table */}
         <div className="card mb-4 border-primary">
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 border border-primary fs-5 text-white d-flex justify-content-between align-items-center py-1">
             <strong>Reproduction / AI / Delivery</strong>
@@ -442,15 +672,15 @@ if (editData) {
               <thead className="table-light">
                 <tr>
                   <th>#</th>
-                  <th>Heat</th>
-                  <th>AI</th>
-                  <th>AI Bull</th>
-                  <th>Bull</th>
-                  <th>Doctor</th>
-                  <th>Preg. Check</th>
+                  <th>Heat Date</th>
+                  <th>AI Date</th>
+                  <th>AI Bull Name</th>
+                  <th>Bull Name</th>
+                  <th>Dr Name</th>
+                  <th>Preg. Check Date</th>
                   <th>Pregnancy Status</th>
-                  <th>Delivery</th>
-                  <th>Calf</th>
+                  <th>Delivery Date</th>
+                  <th>Calf Name</th>
                   <th>Remark</th>
                   <th>Action</th>
                 </tr>
@@ -461,10 +691,10 @@ if (editData) {
                     <td>{i + 1}</td>
                     <td>{rec.HeatComingDate}</td>
                     <td>{rec.AIDate}</td>
-                    <td>{rec.AIBull}</td>
-                    <td>{rec.Bull}</td>
-                    <td>{rec.Doctor}</td>
-                    <td>{rec.PregCheck}</td>
+                    <td>{rec.AIBullName}</td>
+                    <td>{rec.BullName}</td>
+                    <td>{rec.DrName}</td>
+                    <td>{rec.PregnancyCheckDate}</td>
                     <td>{rec.PregnancyStatus}</td>
                     <td>{rec.DeliveryDate}</td>
                     <td>{rec.CalfName}</td>
@@ -489,7 +719,17 @@ if (editData) {
           </div>
         </div>
 
+        {/* Footer Actions */}
         <div className="d-flex justify-content-end gap-2 mb-5">
+          {editData && (
+            <button
+              type="button"
+              className="btn btn-danger px-4 me-auto"
+              onClick={handleDeleteCattle}
+            >
+              🗑️ Delete
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary px-4"
@@ -501,11 +741,12 @@ if (editData) {
             type="submit"
             className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-3 rounded-3 fw-bold shadow-lg border-0"
           >
-            💾 Save
+            Save
           </button>
         </div>
       </form>
 
+      {/* POPUP MODAL */}
       {showModal && (
         <div
           className="modal d-block"
@@ -513,7 +754,7 @@ if (editData) {
         >
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content border-0 shadow">
-              <div className="modal-header bg-gradient-to-r from-indigo-600 to-purple-600 border border-primary fs-5 text-white d-flex justify-content-end py-3">
+              <div className="modal-header bg-gradient-to-r from-indigo-600 to-purple-600 border border-primary fs-5 text-white d-flex justify-content-between py-3">
                 <h5 className="modal-title small fw-bold">
                   Add Reproduction Record
                 </h5>
@@ -530,6 +771,7 @@ if (editData) {
                     type="date"
                     className="form-control form-control-sm"
                     name="HeatComingDate"
+                    value={record.HeatComingDate}
                     onChange={handleRecordChange}
                   />
                 </div>
@@ -539,6 +781,7 @@ if (editData) {
                     type="date"
                     className="form-control form-control-sm"
                     name="AIDate"
+                    value={record.AIDate}
                     onChange={handleRecordChange}
                   />
                 </div>
@@ -547,7 +790,8 @@ if (editData) {
                   <input
                     type="text"
                     className="form-control form-control-sm"
-                    name="AIBull"
+                    name="AIBullName"
+                    value={record.AIBullName}
                     onChange={handleRecordChange}
                   />
                 </div>
@@ -556,7 +800,8 @@ if (editData) {
                   <input
                     type="text"
                     className="form-control form-control-sm"
-                    name="Bull"
+                    name="BullName"
+                    value={record.BullName}
                     onChange={handleRecordChange}
                   />
                 </div>
@@ -565,7 +810,8 @@ if (editData) {
                   <input
                     type="text"
                     className="form-control form-control-sm"
-                    name="Doctor"
+                    name="DrName"
+                    value={record.DrName}
                     onChange={handleRecordChange}
                   />
                 </div>
@@ -574,11 +820,11 @@ if (editData) {
                   <input
                     type="date"
                     className="form-control form-control-sm"
-                    name="PregCheck"
+                    name="PregnancyCheckDate"
+                    value={record.PregnancyCheckDate}
                     onChange={handleRecordChange}
                   />
                 </div>
-
                 <div className="col-md-6">
                   <label className="fw-bold d-block">Pregnancy Status</label>
                   <div className="form-check form-check-inline mt-1">
@@ -587,6 +833,7 @@ if (editData) {
                       type="radio"
                       name="PregnancyStatus"
                       value="Positive"
+                      checked={record.PregnancyStatus === "Positive"}
                       onChange={handleRecordChange}
                     />{" "}
                     Positive
@@ -597,18 +844,19 @@ if (editData) {
                       type="radio"
                       name="PregnancyStatus"
                       value="Negative"
+                      checked={record.PregnancyStatus === "Negative"}
                       onChange={handleRecordChange}
                     />{" "}
                     Negative
                   </div>
                 </div>
-
                 <div className="col-md-6">
                   <label className="fw-bold">Delivery Date</label>
                   <input
                     type="date"
                     className="form-control form-control-sm"
                     name="DeliveryDate"
+                    value={record.DeliveryDate}
                     onChange={handleRecordChange}
                   />
                 </div>
@@ -618,6 +866,7 @@ if (editData) {
                     type="text"
                     className="form-control form-control-sm"
                     name="CalfName"
+                    value={record.CalfName}
                     onChange={handleRecordChange}
                   />
                 </div>
@@ -627,6 +876,7 @@ if (editData) {
                     className="form-control form-control-sm"
                     rows="2"
                     name="Remark"
+                    value={record.Remark}
                     onChange={handleRecordChange}
                   ></textarea>
                 </div>

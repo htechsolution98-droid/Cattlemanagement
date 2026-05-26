@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axiosInstance from "./api/axiosInstance";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const CowDeathRecord = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const cowId = state?.Id ?? state?.id ?? state?.CowId ?? state?.cowId;
 
   const [form, setForm] = useState({
-    CowId: state?.id,
+    CowId: cowId || "",
     DeathDate: "",
     Reason: "",
     Notes: "",
@@ -15,6 +16,21 @@ const CowDeathRecord = () => {
     DisposalDate: "",
     DisposalCost: "",
   });
+   if (!cowId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-red-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <p className="text-red-600 font-semibold mb-4">Error: No cow selected</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,24 +55,68 @@ const CowDeathRecord = () => {
     setForm(updatedForm);
   };
 
-  const save = async (e) => {
-    e.preventDefault();
+ const save = async (e) => {
+  e.preventDefault();
 
-    try {
-      await axios.post(
-        "https://cattlemanagement.runasp.net/gaushala/CowDeath/Record",
-        form
+  try {
+    const selectedCowId = Number(form.CowId);
+
+    if (!Number.isInteger(selectedCowId) || selectedCowId <= 0) {
+      alert(
+        "This animal does not have a valid Cow Id. Please search/select an animal again.",
       );
-
-      alert("Death record saved successfully");
-
-      navigate("/admin-dashboard/cow-death");
-    } catch (error) {
-      console.log(error);
-      alert("Something went wrong");
+      return;
     }
-  };
 
+    const params = {
+      Id: 0,
+      CowId: selectedCowId,
+      DeathDate: form.DeathDate,
+      Reason: form.Reason,
+      Notes: form.Notes,
+      DisposalMethod: form.DisposalMethod,
+      DisposalDate: form.DisposalDate,
+      DisposalCost: Number(form.DisposalCost) || 0,
+      CowName: state?.Name || state?.name || "",
+      RegistrationNo: state?.RegistrationNo || state?.registrationNo || "",
+      AnimalType: state?.AnimalType || state?.animalType || "",
+      PurchaseDate: state?.PurchaseDate || state?.purchaseDate || "",
+      Dob: state?.Dob || state?.dob || "",
+    };
+
+    console.log("SENDING DATA =>", params);
+
+    const formBody = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      formBody.append(key, value ?? "");
+    });
+
+    console.log("SENDING DATA =>", params);
+
+const response = await axiosInstance.post(
+  "/gaushala/CowDeath/Record",
+  null,
+  {
+    params,
+    headers: {
+      Accept: "application/json",
+    },
+  }
+);
+
+console.log("SUCCESS =>", response.data);
+alert("Death record saved successfully");
+navigate("/admin-dashboard/cowdeath");
+
+    console.log("SUCCESS =>", response.data);
+    alert("Death record saved successfully");
+    navigate("/admin-dashboard/cow-death");
+  } catch (error) {
+    console.log("FULL ERROR =>", error);
+    console.log("ERROR RESPONSE =>", error.response?.data);
+    alert("Error: " + (error.response?.data?.message || error.response?.data || "Something went wrong"));
+  }
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-200 p-6">
       <div className="bg-white shadow-xl rounded-3xl p-3 border-l-8 border-red-500 mb-6">
@@ -255,7 +315,7 @@ const CowDeathRecord = () => {
           </button>
 
           <button
-            type="submit"
+            type="submit" 
             className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-lg transition"
           >
             Record Death

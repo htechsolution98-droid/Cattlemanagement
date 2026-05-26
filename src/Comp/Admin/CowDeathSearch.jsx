@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from "./api/axiosInstance";
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -9,8 +9,8 @@ const CowDeathSearch = () => {
   const navigate = useNavigate();
 
   const searchCow = async () => {
-    const res = await axios.get(
-      `https://cattlemanagement.runasp.net/gaushala/CowDeath/Create?registrationNo=${regNo}`,
+    const res = await axiosInstance.get(
+      `/gaushala/CowDeath/Create?registrationNo=${regNo}`,
     );
 
     console.log("API RESPONSE:", res.data);
@@ -34,6 +34,7 @@ const CowDeathSearch = () => {
         item.RegistrationNo?.toLowerCase().trim() ===
         regNo.toLowerCase().trim(),
     );
+    
 
     if (foundCow) {
       setCow(foundCow);
@@ -102,7 +103,7 @@ const CowDeathSearch = () => {
               {/* BUTTON */}
               <button
                 onClick={() =>
-                  navigate("/cowdeath/record", {
+                  navigate("/admin-dashboard/cowdeath/record", {
                     state: cow,
                   })
                 }
